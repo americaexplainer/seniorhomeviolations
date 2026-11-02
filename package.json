@@ -1,0 +1,19 @@
+{
+  "name": "seniorhomeviolations",
+  "type": "module",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview"
+  },
+  "dependencies": {
+    "@astrojs/check": "^0.9.12",
+    "@astrojs/sitemap": "^3.2.0",
+    "@astrojs/tailwind": "^5.1.0",
+    "astro": "^4.16.0",
+    "csv-parse": "^5.6.0",
+    "tailwindcss": "^3.4.0",
+    "typescript": "^5.9.3"
+  }
+}

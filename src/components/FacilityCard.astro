@@ -1,0 +1,27 @@
+---
+import GradeBadge from './GradeBadge.astro';
+import type { Facility } from '../data/loader';
+import { STATE_NAMES } from '../utils/slugify';
+
+interface Props {
+  facility: Facility;
+}
+
+const { facility: f } = Astro.props;
+const stateName = STATE_NAMES[f.state] || f.state;
+---
+<a href={f.url} class="facility-card block bg-white rounded-lg border border-gray-200 hover:border-navy-300 hover:shadow-md transition-all p-4" data-score={f.safetyScore} data-citations={f.healthCitationCount} data-fines={f.totalFines}>
+  <div class="flex items-start gap-4">
+    <GradeBadge grade={f.safetyGrade} size="sm" />
+    <div class="flex-1 min-w-0">
+      <h3 class="font-semibold text-navy-700 truncate">{f.name}</h3>
+      <p class="text-sm text-gray-500">{f.city}, {stateName} {f.zip}</p>
+      <div class="flex flex-wrap gap-3 mt-2 text-xs text-gray-600">
+        <span>{f.beds} beds</span>
+        {f.overallRating > 0 && <span>CMS: {f.overallRating}/5 stars</span>}
+        {f.healthCitationCount > 0 && <span class="text-red-600">{f.healthCitationCount} health citations</span>}
+        {f.totalFines > 0 && <span class="text-red-600">${f.totalFines.toLocaleString()} in fines</span>}
+      </div>
+    </div>
+  </div>
+</a>

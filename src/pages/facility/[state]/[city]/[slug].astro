@@ -1,0 +1,381 @@
+---
+import Layout from '../../../../layouts/Layout.astro';
+import GradeBadge from '../../../../components/GradeBadge.astro';
+import StarsRating from '../../../../components/StarsRating.astro';
+import MonetizationBox from '../../../../components/MonetizationBox.astro';
+import { loadAllFacilities, loadStateAverages } from '../../../../data/loader';
+import { STATE_NAMES, stateSlug } from '../../../../utils/slugify';
+import { gradeColor } from '../../../../utils/grading';
+import type { GetStaticPaths } from 'astro';
+
+export const getStaticPaths: GetStaticPaths = () => {
+  const all = loadAllFacilities();
+  return Array.from(all.values()).map(f => ({
+    params: {
+      state: f.stateSlug,
+      city: f.citySlug,
+      slug: f.facilitySlug,
+    },
+    props: { ccn: f.ccn },
+  }));
+};
+
+const { ccn } = Astro.props;
+const all = loadAllFacilities();
+const f = all.get(ccn)!;
+const stateName = STATE_NAMES[f.state] || f.state;
+const stateAvgs = loadStateAverages();
+const avg = stateAvgs.get(f.state);
+const national = stateAvgs.get('NATION');
+
+// Staffing comparison
+const stateRnHours = avg?.reportedRNHours || national?.reportedRNHours || 0.69;
+const stateTotalNurseHours = avg?.reportedTotalNurseHours || national?.reportedTotalNurseHours || 3.9;
+const rnDiff = f.rnHoursPerResident - stateRnHours;
+const totalDiff = f.totalNurseHours - stateTotalNurseHours;
+
+// Severity label helper
+function severityLabel(code: string): string {
+  if (!code) return 'N/A';
+  const c = code.toUpperCase();
+  if ('ABC'.includes(c)) return 'Minimal Harm Potential';
+  if ('DEF'.includes(c)) return 'Moderate Harm Potential';
+  if ('GHI'.includes(c)) return 'Actual Harm';
+  if ('JKL'.includes(c)) return 'Immediate Jeopardy';
+  return code;
+}
+
+function severityColorClass(code: string): string {
+  if (!code) return 'bg-gray-100 text-gray-700';
+  const c = code.toUpperCase();
+  if ('ABC'.includes(c)) return 'bg-green-100 text-green-700';
+  if ('DEF'.includes(c)) return 'bg-amber-100 text-amber-700';
+  if ('GHI'.includes(c)) return 'bg-orange-100 text-orange-700';
+  if ('JKL'.includes(c)) return 'bg-red-100 text-red-700';
+  return 'bg-gray-100 text-gray-700';
+}
+
+const totalPenaltyFines = f.penalties.reduce((sum, p) => sum + p.fineAmount, 0);
+const pageTitle = `${f.name} Inspection Report, Violations & Safety Grade (${f.city}, ${stateName})`;
+---
+<Layout
+  title={pageTitle}
+  description={`${f.name} in ${f.city}, ${stateName} has a safety grade of ${f.safetyGrade}. View ${f.healthCitationCount} health citations, ${f.fireCitationCount} fire safety citations, and $${f.totalFines.toLocaleString()} in penalty fines.`}
+>
+  <!-- Breadcrumb -->
+  <div class="bg-white border-b border-gray-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+      <nav class="flex text-sm text-gray-500 flex-wrap" aria-label="Breadcrumb">
+        <a href="/" class="hover:text-navy-600">Home</a>
+        <span class="mx-2">/</span>
+        <a href={`/state/${f.stateSlug}/`} class="hover:text-navy-600">{stateName}</a>
+        <span class="mx-2">/</span>
+        <a href={`/state/${f.stateSlug}/${f.citySlug}/`} class="hover:text-navy-600">{f.city}</a>
+        <span class="mx-2">/</span>
+        <span class="text-gray-900 font-medium truncate max-w-[200px]">{f.name}</span>
+      </nav>
+    </div>
+  </div>
+
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="lg:grid lg:grid-cols-[1fr_300px] lg:gap-10 lg:items-start">
+
+      <!-- Main Content — fluid, capped for readability -->
+      <div class="min-w-0 max-w-4xl space-y-6">
+
+        <!-- Header with Grade -->
+        <div class="bg-white rounded-xl border border-gray-200 p-6">
+          <div class="flex flex-col sm:flex-row sm:items-start gap-6">
+            <GradeBadge grade={f.safetyGrade} size="lg" score={f.safetyScore} />
+            <div class="flex-1">
+              <h1 class="text-2xl sm:text-3xl font-extrabold text-gray-900 leading-tight">
+                {f.name} Inspection Report, Violations & Safety Grade ({f.city}, {stateName})
+              </h1>
+              <p class="text-gray-500 mt-2">{f.address}, {f.city}, {stateName} {f.zip}</p>
+              {f.phone && <p class="text-gray-500 text-sm mt-1">Phone: {f.phone}</p>}
+              <div class="flex flex-wrap gap-4 mt-3">
+                {f.overallRating > 0 && <StarsRating rating={f.overallRating} label="CMS Overall:" />}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Overview & Bed Count -->
+        <div class="bg-white rounded-xl border border-gray-200 p-6">
+          <h2 class="text-xl font-bold text-gray-900 mb-4">Overview & Bed Count</h2>
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div>
+              <div class="text-sm text-gray-500">Certified Beds</div>
+              <div class="text-lg font-semibold text-gray-900">{f.beds}</div>
+            </div>
+            <div>
+              <div class="text-sm text-gray-500">Avg Residents/Day</div>
+              <div class="text-lg font-semibold text-gray-900">{f.avgResidents}</div>
+            </div>
+            <div>
+              <div class="text-sm text-gray-500">Ownership</div>
+              <div class="text-sm font-semibold text-gray-900">{f.ownershipType || 'N/A'}</div>
+            </div>
+            <div>
+              <div class="text-sm text-gray-500">Provider Type</div>
+              <div class="text-sm font-semibold text-gray-900">{f.providerType || 'N/A'}</div>
+            </div>
+            <div>
+              <div class="text-sm text-gray-500">County</div>
+              <div class="text-sm font-semibold text-gray-900">{f.county || 'N/A'}</div>
+            </div>
+            <div>
+              <div class="text-sm text-gray-500">Sprinkler Systems</div>
+              <div class="text-sm font-semibold text-gray-900">{f.sprinklers || 'N/A'}</div>
+            </div>
+            <div>
+              <div class="text-sm text-gray-500">Special Focus</div>
+              <div class={`text-sm font-semibold ${f.specialFocusStatus && f.specialFocusStatus !== 'N' ? 'text-red-600' : 'text-gray-900'}`}>
+                {f.specialFocusStatus && f.specialFocusStatus !== 'N' ? f.specialFocusStatus : 'None'}
+              </div>
+            </div>
+            <div>
+              <div class="text-sm text-gray-500">Abuse Icon</div>
+              <div class={`text-sm font-semibold ${f.abuseIcon === 'Y' ? 'text-red-600' : 'text-gray-900'}`}>
+                {f.abuseIcon === 'Y' ? 'Yes' : 'No'}
+              </div>
+            </div>
+          </div>
+
+          <!-- CMS Star Ratings -->
+          <div class="mt-6 pt-4 border-t border-gray-100">
+            <h3 class="text-sm font-semibold text-gray-700 mb-3">CMS Star Ratings</h3>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div><StarsRating rating={f.overallRating} label="Overall" /></div>
+              <div><StarsRating rating={f.healthRating} label="Health" /></div>
+              <div><StarsRating rating={f.staffingRating} label="Staffing" /></div>
+              <div><StarsRating rating={f.qmRating} label="Quality" /></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Nurse Staffing Check -->
+        <div class="bg-white rounded-xl border border-gray-200 p-6">
+          <h2 class="text-xl font-bold text-gray-900 mb-4">Nurse Staffing Check</h2>
+          <div class="-mx-6">
+            <div class="overflow-x-auto px-6">
+            <table class="w-full text-sm table-fixed min-w-[520px]">
+              <colgroup>
+                <col style="width:auto" />
+                <col style="width:110px" />
+                <col style="width:110px" />
+                <col style="width:100px" />
+              </colgroup>
+              <thead>
+                <tr class="border-b border-gray-200">
+                  <th class="text-left py-2 text-gray-500 font-medium">Metric</th>
+                  <th class="text-right py-2 text-gray-500 font-medium">This Facility</th>
+                  <th class="text-right py-2 text-gray-500 font-medium">{stateName} Avg</th>
+                  <th class="text-right py-2 text-gray-500 font-medium">Difference</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="border-b border-gray-100">
+                  <td class="py-3 text-gray-700">RN Hours per Resident per Day</td>
+                  <td class="py-3 text-right font-medium">{f.rnHoursPerResident.toFixed(2)}</td>
+                  <td class="py-3 text-right text-gray-500">{stateRnHours.toFixed(2)}</td>
+                  <td class={`py-3 text-right font-medium ${rnDiff >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {rnDiff >= 0 ? '+' : ''}{rnDiff.toFixed(2)}
+                  </td>
+                </tr>
+                <tr class="border-b border-gray-100">
+                  <td class="py-3 text-gray-700">Total Nurse Hours per Resident per Day</td>
+                  <td class="py-3 text-right font-medium">{f.totalNurseHours.toFixed(2)}</td>
+                  <td class="py-3 text-right text-gray-500">{stateTotalNurseHours.toFixed(2)}</td>
+                  <td class={`py-3 text-right font-medium ${totalDiff >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {totalDiff >= 0 ? '+' : ''}{totalDiff.toFixed(2)}
+                  </td>
+                </tr>
+                <tr class="border-b border-gray-100">
+                  <td class="py-3 text-gray-700">CMS Staffing Rating</td>
+                  <td class="py-3 text-right font-medium">{f.staffingRating > 0 ? `${f.staffingRating}/5` : 'N/A'}</td>
+                  <td class="py-3 text-right text-gray-500">{avg?.staffingRating ? `${avg.staffingRating}/5` : 'N/A'}</td>
+                  <td class="py-3 text-right text-gray-500">-</td>
+                </tr>
+                <tr>
+                  <td class="py-3 text-gray-700">Nursing Staff Turnover</td>
+                  <td class="py-3 text-right font-medium">{f.nursingTurnover ? `${f.nursingTurnover}%` : 'N/A'}</td>
+                  <td class="py-3 text-right text-gray-500">{avg?.nursingTurnover ? `${avg.nursingTurnover}%` : 'N/A'}</td>
+                  <td class="py-3 text-right text-gray-500">-</td>
+                </tr>
+              </tbody>
+            </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Health Citation History -->
+        <div class="bg-white rounded-xl border border-gray-200 p-6">
+          <h2 class="text-xl font-bold text-gray-900 mb-1">Health Citation History</h2>
+          <p class="text-sm text-gray-500 mb-4">{f.healthCitationCount} health {f.healthCitationCount === 1 ? 'citation' : 'citations'} on record</p>
+          {f.healthCitations.length > 0 ? (
+            <>
+              <div class="-mx-6">
+                <div class="overflow-x-auto px-6">
+                <table class="w-full text-sm table-fixed min-w-[680px]">
+                  <colgroup>
+                    <col style="width:120px" />
+                    <col style="width:180px" />
+                    <col style="width:auto" />
+                    <col style="width:150px" />
+                  </colgroup>
+                  <thead>
+                    <tr class="border-b border-gray-200 text-left">
+                      <th class="py-2 text-gray-500 font-medium">Date</th>
+                      <th class="py-2 text-gray-500 font-medium">Category</th>
+                      <th class="py-2 text-gray-500 font-medium">Description</th>
+                      <th class="py-2 text-gray-500 font-medium">Severity</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {f.healthCitations.slice(0, 50).map(c => (
+                      <tr class="border-b border-gray-50 hover:bg-gray-50 align-top">
+                        <td class="py-2.5 text-gray-700 whitespace-nowrap">{c.surveyDate}</td>
+                        <td class="py-2.5 text-gray-700 text-sm">{c.category}</td>
+                        <td class="py-2.5 text-gray-600 text-xs leading-relaxed break-words">{c.description}</td>
+                        <td class="py-2.5">
+                          <span class={`inline-block text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${severityColorClass(c.severityCode)}`}>
+                            {c.severityCode} &ndash; {severityLabel(c.severityCode)}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                </div>
+              </div>
+              {f.healthCitations.length > 50 && (
+                <p class="text-sm text-gray-500 mt-3">Showing 50 of {f.healthCitations.length} citations.</p>
+              )}
+            </>
+          ) : (
+            <p class="text-gray-500 text-sm">No health citations on record.</p>
+          )}
+        </div>
+
+        <!-- Fire Safety Citation History -->
+        <div class="bg-white rounded-xl border border-gray-200 p-6">
+          <h2 class="text-xl font-bold text-gray-900 mb-1">Fire Safety Citation History</h2>
+          <p class="text-sm text-gray-500 mb-4">{f.fireCitationCount} fire safety {f.fireCitationCount === 1 ? 'citation' : 'citations'} on record</p>
+          {f.fireCitations.length > 0 ? (
+            <>
+              <div class="-mx-6">
+                <div class="overflow-x-auto px-6">
+                <table class="w-full text-sm table-fixed min-w-[680px]">
+                  <colgroup>
+                    <col style="width:120px" />
+                    <col style="width:180px" />
+                    <col style="width:auto" />
+                    <col style="width:150px" />
+                  </colgroup>
+                  <thead>
+                    <tr class="border-b border-gray-200 text-left">
+                      <th class="py-2 text-gray-500 font-medium">Date</th>
+                      <th class="py-2 text-gray-500 font-medium">Category</th>
+                      <th class="py-2 text-gray-500 font-medium">Description</th>
+                      <th class="py-2 text-gray-500 font-medium">Severity</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {f.fireCitations.slice(0, 50).map(c => (
+                      <tr class="border-b border-gray-50 hover:bg-gray-50 align-top">
+                        <td class="py-2.5 text-gray-700 whitespace-nowrap">{c.surveyDate}</td>
+                        <td class="py-2.5 text-gray-700 text-sm">{c.category}</td>
+                        <td class="py-2.5 text-gray-600 text-xs leading-relaxed break-words">{c.description}</td>
+                        <td class="py-2.5">
+                          <span class={`inline-block text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${severityColorClass(c.severityCode)}`}>
+                            {c.severityCode} &ndash; {severityLabel(c.severityCode)}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                </div>
+              </div>
+              {f.fireCitations.length > 50 && (
+                <p class="text-sm text-gray-500 mt-3">Showing 50 of {f.fireCitations.length} citations.</p>
+              )}
+            </>
+          ) : (
+            <p class="text-gray-500 text-sm">No fire safety citations on record.</p>
+          )}
+        </div>
+
+        <!-- Penalties & Fines -->
+        <div class="bg-white rounded-xl border border-gray-200 p-6">
+          <h2 class="text-xl font-bold text-gray-900 mb-1">Total Penalties & Fines</h2>
+          <div class="grid grid-cols-2 md:grid-cols-3 gap-4 my-4">
+            <div class="bg-gray-50 rounded-lg p-4 text-center">
+              <div class={`text-2xl font-bold ${f.totalFines > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                ${f.totalFines.toLocaleString()}
+              </div>
+              <div class="text-xs text-gray-500 mt-1">Total Fine Amount (CMS)</div>
+            </div>
+            <div class="bg-gray-50 rounded-lg p-4 text-center">
+              <div class="text-2xl font-bold text-gray-900">{f.numFines}</div>
+              <div class="text-xs text-gray-500 mt-1">Number of Fines</div>
+            </div>
+            <div class="bg-gray-50 rounded-lg p-4 text-center">
+              <div class="text-2xl font-bold text-gray-900">{f.numPenalties}</div>
+              <div class="text-xs text-gray-500 mt-1">Total Penalties</div>
+            </div>
+          </div>
+          {f.penalties.length > 0 ? (
+            <div class="-mx-6">
+              <div class="overflow-x-auto px-6">
+              <table class="w-full text-sm table-fixed min-w-[500px]">
+                <colgroup>
+                  <col style="width:120px" />
+                  <col style="width:120px" />
+                  <col style="width:130px" />
+                  <col style="width:auto" />
+                </colgroup>
+                <thead>
+                  <tr class="border-b border-gray-200 text-left">
+                    <th class="py-2 text-gray-500 font-medium">Date</th>
+                    <th class="py-2 text-gray-500 font-medium">Type</th>
+                    <th class="py-2 text-gray-500 font-medium text-right">Fine Amount</th>
+                    <th class="py-2 text-gray-500 font-medium">Payment Denial</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {f.penalties.map(p => (
+                    <tr class="border-b border-gray-50 hover:bg-gray-50">
+                      <td class="py-2.5 whitespace-nowrap text-gray-700">{p.date}</td>
+                      <td class="py-2.5 whitespace-nowrap text-gray-700">{p.type}</td>
+                      <td class="py-2.5 text-right font-medium text-red-600 whitespace-nowrap">
+                        {p.fineAmount > 0 ? `$${p.fineAmount.toLocaleString()}` : '-'}
+                      </td>
+                      <td class="py-2.5 text-gray-600 text-xs">
+                        {p.paymentDenialDays > 0 ? `${p.paymentDenialDays} days starting ${p.paymentDenialStart}` : '-'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              </div>
+            </div>
+          ) : (
+            <p class="text-gray-500 text-sm">No penalty records found.</p>
+          )}
+        </div>
+      </div>
+
+      <!-- Sidebar — sticky, contained within its grid column -->
+      <div class="hidden lg:block self-start sticky top-6">
+        <MonetizationBox city={f.city} state={stateName} />
+      </div>
+
+      <!-- Mobile CTA — shown below content on small screens -->
+      <div class="lg:hidden mt-8">
+        <MonetizationBox city={f.city} state={stateName} />
+      </div>
+    </div>
+  </div>
+</Layout>

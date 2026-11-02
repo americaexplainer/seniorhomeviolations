@@ -1,0 +1,103 @@
+---
+import Layout from '../layouts/Layout.astro';
+import SearchBar from '../components/SearchBar.astro';
+import GradeBadge from '../components/GradeBadge.astro';
+import FacilityCard from '../components/FacilityCard.astro';
+import { getTopPenaltyFacilities, getStatesWithCounts } from '../data/loader';
+import { STATE_NAMES } from '../utils/slugify';
+
+const topPenalty = getTopPenaltyFacilities(10);
+const states = getStatesWithCounts();
+---
+<Layout title="Nursing Home Safety Grades, Violations & Inspection Reports" description="Search 14,000+ nursing home safety grades, inspection violations, citations, and penalty records. Independent watchdog reports from official CMS data.">
+
+  <!-- Hero -->
+  <section class="bg-gradient-to-br from-navy-500 via-navy-600 to-navy-800 text-white py-16 sm:py-24">
+    <div class="max-w-4xl mx-auto px-4 text-center">
+      <div class="inline-flex items-center gap-2 bg-amber-400/20 text-amber-300 text-sm font-medium px-4 py-1.5 rounded-full mb-6">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+        Independent Safety Watchdog
+      </div>
+      <h1 class="text-3xl sm:text-5xl font-extrabold leading-tight mb-4">
+        Nursing Home Safety Grades<br />& Violation Reports
+      </h1>
+      <p class="text-lg text-navy-100 mb-10 max-w-2xl mx-auto">
+        Search over 14,000 facilities. Every inspection citation, penalty fine, and staffing metric &mdash; graded and ranked from official CMS government records.
+      </p>
+      <SearchBar />
+    </div>
+  </section>
+
+  <!-- High Penalty Alerts -->
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+      <div class="flex items-center gap-3">
+        <svg class="w-6 h-6 text-red-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" /></svg>
+        <h2 class="text-2xl font-bold text-gray-900">Recent High-Penalty Alerts</h2>
+      </div>
+      <!-- Safety Grade Legend -->
+      <div class="flex items-center gap-3 text-xs text-gray-500">
+        <span class="font-medium text-gray-600">Grade Scale:</span>
+        <span class="inline-flex items-center gap-1"><span class="w-5 h-5 rounded bg-green-600 text-white font-bold flex items-center justify-center text-[10px]">A</span> Excellent</span>
+        <span class="inline-flex items-center gap-1"><span class="w-5 h-5 rounded bg-blue-600 text-white font-bold flex items-center justify-center text-[10px]">B</span> Good</span>
+        <span class="inline-flex items-center gap-1"><span class="w-5 h-5 rounded bg-amber-500 text-white font-bold flex items-center justify-center text-[10px]">C</span> Average</span>
+        <span class="inline-flex items-center gap-1"><span class="w-5 h-5 rounded bg-orange-500 text-white font-bold flex items-center justify-center text-[10px]">D</span> Poor</span>
+        <span class="inline-flex items-center gap-1"><span class="w-5 h-5 rounded bg-red-600 text-white font-bold flex items-center justify-center text-[10px]">F</span> High Violations</span>
+      </div>
+    </div>
+    <p class="text-gray-600 mb-6">Facilities with the largest total penalty fines from CMS enforcement actions.</p>
+    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
+      {topPenalty.map(f => (
+        <FacilityCard facility={f} />
+      ))}
+    </div>
+  </section>
+
+  <!-- Browse by State -->
+  <section id="states" class="bg-white border-t border-gray-100">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <h2 class="text-2xl font-bold text-gray-900 mb-2">Browse by State</h2>
+      <p class="text-gray-600 mb-8">Select a state to view all nursing home safety grades and violation records.</p>
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+        {states.map(s => (
+          <a
+            href={`/state/${s.slug}/`}
+            class="flex items-center justify-between bg-gray-50 hover:bg-navy-50 border border-gray-200 hover:border-navy-300 rounded-lg px-4 py-3 transition-colors"
+          >
+            <span class="font-medium text-navy-700">{s.abbr}</span>
+            <span class="text-xs text-gray-500">{s.count.toLocaleString()}</span>
+          </a>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- How grades work -->
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <h2 class="text-2xl font-bold text-gray-900 mb-6">How Our Safety Grades Work</h2>
+    <div class="grid md:grid-cols-3 gap-6">
+      <div class="bg-white rounded-xl border border-gray-200 p-6">
+        <div class="w-10 h-10 bg-navy-100 rounded-lg flex items-center justify-center mb-3">
+          <svg class="w-5 h-5 text-navy-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+        </div>
+        <h3 class="font-semibold text-gray-900 mb-2">Official CMS Data</h3>
+        <p class="text-sm text-gray-600">Every grade is calculated from real inspection results, citation records, and penalty data published by the Centers for Medicare & Medicaid Services.</p>
+      </div>
+      <div class="bg-white rounded-xl border border-gray-200 p-6">
+        <div class="w-10 h-10 bg-navy-100 rounded-lg flex items-center justify-center mb-3">
+          <svg class="w-5 h-5 text-navy-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+        </div>
+        <h3 class="font-semibold text-gray-900 mb-2">Multi-Factor Algorithm</h3>
+        <p class="text-sm text-gray-600">Grades combine CMS star ratings, health and fire safety citation severity, total penalty fines, and staffing levels compared to state averages.</p>
+      </div>
+      <div class="bg-white rounded-xl border border-gray-200 p-6">
+        <div class="w-10 h-10 bg-navy-100 rounded-lg flex items-center justify-center mb-3">
+          <svg class="w-5 h-5 text-navy-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" /></svg>
+        </div>
+        <h3 class="font-semibold text-gray-900 mb-2">State-Level Comparison</h3>
+        <p class="text-sm text-gray-600">Each facility is measured against its own state averages, so grades reflect how it performs relative to local peers.</p>
+      </div>
+    </div>
+  </section>
+
+</Layout>

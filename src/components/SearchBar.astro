@@ -1,0 +1,84 @@
+---
+---
+<div id="search" class="w-full max-w-2xl mx-auto">
+  <div class="relative">
+    <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+    </svg>
+    <input
+      type="text"
+      id="facility-search"
+      placeholder="Search by facility name, city, or state..."
+      class="w-full pl-12 pr-4 py-4 text-lg border-2 border-gray-200 rounded-xl focus:border-navy-500 focus:outline-none shadow-sm bg-white"
+      autocomplete="off"
+    />
+  </div>
+  <div id="search-results" class="mt-2 bg-white rounded-xl shadow-lg border border-gray-200 hidden max-h-96 overflow-y-auto"></div>
+</div>
+
+<script>
+  let searchIndex: { name: string; city: string; state: string; grade: string; url: string }[] = [];
+  let loaded = false;
+
+  const input = document.getElementById('facility-search') as HTMLInputElement;
+  const resultsEl = document.getElementById('search-results') as HTMLDivElement;
+
+  async function loadIndex() {
+    if (loaded) return;
+    try {
+      const res = await fetch('/search-index.json');
+      searchIndex = await res.json();
+      loaded = true;
+    } catch (e) {
+      console.error('Failed to load search index', e);
+    }
+  }
+
+  function gradeColorClass(grade: string): string {
+    if (grade.startsWith('A')) return 'bg-green-100 text-green-700';
+    if (grade.startsWith('B')) return 'bg-blue-100 text-blue-700';
+    if (grade.startsWith('C')) return 'bg-amber-100 text-amber-700';
+    if (grade.startsWith('D')) return 'bg-orange-100 text-orange-700';
+    return 'bg-red-100 text-red-700';
+  }
+
+  function doSearch(query: string) {
+    if (!query || query.length < 2) {
+      resultsEl.classList.add('hidden');
+      return;
+    }
+    const q = query.toLowerCase();
+    const matches = searchIndex
+      .filter(f =>
+        f.name.toLowerCase().includes(q) ||
+        f.city.toLowerCase().includes(q) ||
+        f.state.toLowerCase().includes(q)
+      )
+      .slice(0, 25);
+
+    if (matches.length === 0) {
+      resultsEl.innerHTML = '<div class="p-4 text-gray-500 text-sm">No facilities found.</div>';
+    } else {
+      resultsEl.innerHTML = matches
+        .map(f => `
+          <a href="${f.url}" class="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 border-b border-gray-100 last:border-0">
+            <span class="inline-flex items-center justify-center w-9 h-9 rounded-lg text-xs font-bold ${gradeColorClass(f.grade)}">${f.grade}</span>
+            <div class="min-w-0">
+              <div class="font-medium text-sm text-gray-900 truncate">${f.name}</div>
+              <div class="text-xs text-gray-500">${f.city}, ${f.state}</div>
+            </div>
+          </a>
+        `)
+        .join('');
+    }
+    resultsEl.classList.remove('hidden');
+  }
+
+  input.addEventListener('focus', loadIndex);
+  input.addEventListener('input', () => doSearch(input.value));
+  document.addEventListener('click', (e) => {
+    if (!resultsEl.contains(e.target as Node) && e.target !== input) {
+      resultsEl.classList.add('hidden');
+    }
+  });
+</script>

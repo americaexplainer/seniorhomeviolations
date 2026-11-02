@@ -1,0 +1,27 @@
+---
+import type { Grade } from '../utils/grading';
+import { gradeBgClass } from '../utils/grading';
+
+interface Props {
+  grade: Grade;
+  size?: 'sm' | 'md' | 'lg';
+  score?: number;
+}
+
+const { grade, size = 'md', score } = Astro.props;
+const bg = gradeBgClass(grade);
+
+const sizeClasses = {
+  sm: 'w-12 h-12 text-lg',
+  md: 'w-20 h-20 text-3xl',
+  lg: 'w-28 h-28 text-5xl',
+};
+---
+<div class="inline-flex flex-col items-center">
+  <div class={`${sizeClasses[size]} ${bg} text-white font-extrabold rounded-xl flex items-center justify-center shadow-lg`}>
+    {grade}
+  </div>
+  {score !== undefined && (
+    <span class="text-xs text-gray-500 mt-1">{score}/100</span>
+  )}
+</div>

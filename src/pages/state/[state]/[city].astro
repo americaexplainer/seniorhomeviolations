@@ -1,0 +1,97 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+import FacilityCard from '../../../components/FacilityCard.astro';
+import { getFacilitiesByStateCity, getFacilitiesByState } from '../../../data/loader';
+import { STATE_NAMES, stateSlug, citySlug } from '../../../utils/slugify';
+import type { GetStaticPaths } from 'astro';
+
+export const getStaticPaths: GetStaticPaths = () => {
+  const byStateCity = getFacilitiesByStateCity();
+  const paths: { params: { state: string; city: string }; props: { stateAbbr: string; cityName: string } }[] = [];
+
+  for (const [key, facs] of byStateCity) {
+    if (facs.length === 0) continue;
+    const [st, ct] = key.split('/');
+    paths.push({
+      params: { state: st, city: ct },
+      props: { stateAbbr: facs[0].state, cityName: facs[0].city },
+    });
+  }
+  return paths;
+};
+
+const { stateAbbr, cityName } = Astro.props;
+const stateName = STATE_NAMES[stateAbbr] || stateAbbr;
+const st = stateSlug(stateAbbr);
+const ct = citySlug(cityName);
+const byStateCity = getFacilitiesByStateCity();
+const facilities = byStateCity.get(`${st}/${ct}`) || [];
+---
+<Layout
+  title={`${cityName}, ${stateName} Nursing Home Safety Grades & Violations`}
+  description={`Safety grades and inspection violation records for ${facilities.length} nursing homes in ${cityName}, ${stateName}. Ranked from safest to most cited.`}
+>
+  <!-- Breadcrumb -->
+  <div class="bg-white border-b border-gray-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+      <nav class="flex text-sm text-gray-500 flex-wrap" aria-label="Breadcrumb">
+        <a href="/" class="hover:text-navy-600">Home</a>
+        <span class="mx-2">/</span>
+        <a href={`/state/${st}/`} class="hover:text-navy-600">{stateName}</a>
+        <span class="mx-2">/</span>
+        <span class="text-gray-900 font-medium">{cityName}</span>
+      </nav>
+    </div>
+  </div>
+
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <h1 class="text-3xl font-extrabold text-gray-900 mb-2">
+      {cityName}, {stateName} Nursing Home Safety Grades & Violations
+    </h1>
+    <p class="text-gray-600 mb-8">
+      {facilities.length} nursing {facilities.length === 1 ? 'home' : 'homes'} in {cityName}, ranked by safety grade.
+    </p>
+
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+      <h2 class="text-lg font-bold text-gray-900">
+        All Facilities ({facilities.length})
+      </h2>
+      <div class="flex items-center gap-2">
+        <label for="sort-select" class="text-sm text-gray-500 whitespace-nowrap">Sort by:</label>
+        <select id="sort-select" class="text-sm border border-gray-300 rounded-lg px-3 py-1.5 bg-white text-gray-700 focus:outline-none focus:border-navy-500">
+          <option value="best">Best Safety Grade (A+ to F)</option>
+          <option value="worst">Worst Safety Grade (F to A+)</option>
+          <option value="citations">Most Health Citations</option>
+          <option value="fines">Highest Total Fines</option>
+        </select>
+      </div>
+    </div>
+    <div id="facility-grid" class="grid gap-3 sm:grid-cols-2">
+      {facilities.map(f => (
+        <FacilityCard facility={f} />
+      ))}
+    </div>
+  </div>
+
+  <script>
+    const select = document.getElementById('sort-select') as HTMLSelectElement;
+    const grid = document.getElementById('facility-grid')!;
+
+    select.addEventListener('change', () => {
+      const cards = Array.from(grid.querySelectorAll('.facility-card')) as HTMLElement[];
+      cards.sort((a, b) => {
+        const as = Number(a.dataset.score), bs = Number(b.dataset.score);
+        const ac = Number(a.dataset.citations), bc = Number(b.dataset.citations);
+        const af = Number(a.dataset.fines), bf = Number(b.dataset.fines);
+        switch (select.value) {
+          case 'best':    return bs - as;
+          case 'worst':   return as - bs;
+          case 'citations': return bc - ac || as - bs;
+          case 'fines':   return bf - af || as - bs;
+          default: return 0;
+        }
+      });
+      for (const card of cards) grid.appendChild(card);
+    });
+  </script>
+</Layout>

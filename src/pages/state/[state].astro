@@ -1,0 +1,160 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import FacilityCard from '../../components/FacilityCard.astro';
+import GradeBadge from '../../components/GradeBadge.astro';
+import { getFacilitiesByState, getFacilitiesByStateCity, loadStateAverages } from '../../data/loader';
+import { STATE_NAMES, stateSlug, citySlug } from '../../utils/slugify';
+import type { GetStaticPaths } from 'astro';
+
+export const getStaticPaths: GetStaticPaths = () => {
+  const byState = getFacilitiesByState();
+  return Array.from(byState.keys()).map(abbr => ({
+    params: { state: stateSlug(abbr) },
+    props: { stateAbbr: abbr },
+  }));
+};
+
+const { stateAbbr } = Astro.props;
+const stateName = STATE_NAMES[stateAbbr] || stateAbbr;
+const byState = getFacilitiesByState();
+const facilities = byState.get(stateAbbr) || [];
+const stateAvgs = loadStateAverages();
+const avg = stateAvgs.get(stateAbbr);
+
+// Group by city for sub-navigation
+const cityMap = new Map<string, { city: string; slug: string; count: number }>();
+for (const f of facilities) {
+  const cs = citySlug(f.city);
+  if (!cityMap.has(cs)) {
+    cityMap.set(cs, { city: f.city, slug: cs, count: 0 });
+  }
+  cityMap.get(cs)!.count++;
+}
+const cities = Array.from(cityMap.values()).sort((a, b) => a.city.localeCompare(b.city));
+
+// Grade distribution
+const gradeDistribution: Record<string, number> = {};
+for (const f of facilities) {
+  const g = f.safetyGrade[0]; // A, B, C, D, F
+  gradeDistribution[g] = (gradeDistribution[g] || 0) + 1;
+}
+---
+<Layout
+  title={`${stateName} Nursing Home Safety Grades & Violations`}
+  description={`View safety grades, inspection violations, and penalty records for all ${facilities.length} nursing homes in ${stateName}. Ranked from safest to most cited.`}
+>
+  <!-- Breadcrumb -->
+  <div class="bg-white border-b border-gray-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+      <nav class="flex text-sm text-gray-500" aria-label="Breadcrumb">
+        <a href="/" class="hover:text-navy-600">Home</a>
+        <span class="mx-2">/</span>
+        <span class="text-gray-900 font-medium">{stateName}</span>
+      </nav>
+    </div>
+  </div>
+
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <h1 class="text-3xl font-extrabold text-gray-900 mb-2">
+      {stateName} Nursing Home Safety Grades & Violations
+    </h1>
+    <p class="text-gray-600 mb-8">
+      {facilities.length.toLocaleString()} nursing homes ranked by safety grade. Data from CMS inspection records.
+    </p>
+
+    <!-- State stats bar -->
+    {avg && (
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div class="bg-white rounded-lg border border-gray-200 p-4 text-center">
+          <div class="text-2xl font-bold text-navy-600">{facilities.length.toLocaleString()}</div>
+          <div class="text-xs text-gray-500 mt-1">Total Facilities</div>
+        </div>
+        <div class="bg-white rounded-lg border border-gray-200 p-4 text-center">
+          <div class="text-2xl font-bold text-navy-600">{avg.overallRating}/5</div>
+          <div class="text-xs text-gray-500 mt-1">Avg CMS Rating</div>
+        </div>
+        <div class="bg-white rounded-lg border border-gray-200 p-4 text-center">
+          <div class="text-2xl font-bold text-navy-600">{avg.cycle1HealthDef}</div>
+          <div class="text-xs text-gray-500 mt-1">Avg Health Deficiencies</div>
+        </div>
+        <div class="bg-white rounded-lg border border-gray-200 p-4 text-center">
+          <div class="text-2xl font-bold text-navy-600">${avg.fineAmount.toLocaleString()}</div>
+          <div class="text-xs text-gray-500 mt-1">Avg Fine Amount</div>
+        </div>
+      </div>
+    )}
+
+    <!-- Grade distribution -->
+    <div class="bg-white rounded-lg border border-gray-200 p-4 mb-8">
+      <h2 class="font-semibold text-gray-900 mb-3">Grade Distribution</h2>
+      <div class="flex gap-4 flex-wrap">
+        {['A', 'B', 'C', 'D', 'F'].map(g => (
+          <div class="text-center">
+            <div class={`text-lg font-bold ${g === 'A' ? 'text-green-600' : g === 'B' ? 'text-blue-600' : g === 'C' ? 'text-amber-600' : g === 'D' ? 'text-orange-600' : 'text-red-600'}`}>
+              {gradeDistribution[g] || 0}
+            </div>
+            <div class="text-xs text-gray-500">{g} grades</div>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    <!-- Cities in state -->
+    <div class="bg-white rounded-lg border border-gray-200 p-4 mb-8">
+      <h2 class="font-semibold text-gray-900 mb-3">Cities in {stateName} ({cities.length})</h2>
+      <div class="flex flex-wrap gap-2 max-h-48 overflow-y-auto">
+        {cities.map(c => (
+          <a
+            href={`/state/${stateSlug(stateAbbr)}/${c.slug}/`}
+            class="text-sm bg-gray-50 hover:bg-navy-50 border border-gray-200 hover:border-navy-300 rounded-md px-3 py-1.5 transition-colors"
+          >
+            {c.city} <span class="text-gray-400">({c.count})</span>
+          </a>
+        ))}
+      </div>
+    </div>
+
+    <!-- All facilities -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+      <h2 class="text-xl font-bold text-gray-900">
+        All Facilities ({facilities.length.toLocaleString()})
+      </h2>
+      <div class="flex items-center gap-2">
+        <label for="sort-select" class="text-sm text-gray-500 whitespace-nowrap">Sort by:</label>
+        <select id="sort-select" class="text-sm border border-gray-300 rounded-lg px-3 py-1.5 bg-white text-gray-700 focus:outline-none focus:border-navy-500">
+          <option value="best">Best Safety Grade (A+ to F)</option>
+          <option value="worst">Worst Safety Grade (F to A+)</option>
+          <option value="citations">Most Health Citations</option>
+          <option value="fines">Highest Total Fines</option>
+        </select>
+      </div>
+    </div>
+    <div id="facility-grid" class="grid gap-3 sm:grid-cols-2">
+      {facilities.map(f => (
+        <FacilityCard facility={f} />
+      ))}
+    </div>
+  </div>
+
+  <script>
+    const select = document.getElementById('sort-select') as HTMLSelectElement;
+    const grid = document.getElementById('facility-grid')!;
+
+    select.addEventListener('change', () => {
+      const cards = Array.from(grid.querySelectorAll('.facility-card')) as HTMLElement[];
+      cards.sort((a, b) => {
+        const as = Number(a.dataset.score), bs = Number(b.dataset.score);
+        const ac = Number(a.dataset.citations), bc = Number(b.dataset.citations);
+        const af = Number(a.dataset.fines), bf = Number(b.dataset.fines);
+        switch (select.value) {
+          case 'best':    return bs - as;
+          case 'worst':   return as - bs;
+          case 'citations': return bc - ac || as - bs;
+          case 'fines':   return bf - af || as - bs;
+          default: return 0;
+        }
+      });
+      for (const card of cards) grid.appendChild(card);
+    });
+  </script>
+</Layout>
