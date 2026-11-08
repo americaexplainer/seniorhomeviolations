@@ -1,29 +1,25 @@
 ---
-interface Props {
-  city: string;
-  state: string;
-}
-
-const { city, state } = Astro.props;
+// Global Sidebar CTA -> Routes to /checklist Landing Page
 ---
-<div class="sticky top-4 bg-gradient-to-br from-navy-500 to-navy-700 text-white rounded-xl p-6 shadow-xl">
-  <div class="flex items-center gap-2 mb-2">
-    <span class="inline-block w-2.5 h-2.5 bg-amber-400 rounded-full animate-pulse"></span>
-    <span class="text-xs font-semibold uppercase tracking-wider text-amber-300">Essential Guide</span>
+<div class="bg-slate-900 text-white p-6 rounded-xl shadow-lg border-2 border-amber-500 my-6">
+  <div class="inline-block bg-amber-500/20 text-amber-400 text-xs font-bold px-2.5 py-1 rounded uppercase tracking-wider mb-3 border border-amber-500/40">
+    Family Protection Guide
   </div>
-  <h3 class="text-lg font-bold mb-2">The Nursing Home Safety & Transition Checklist</h3>
-  <p class="text-sm text-navy-100 mb-5">Don't risk your loved one's safety. Learn the 20 hidden red flags to look for and exactly how to transition to a safe facility.</p>
-  
-  <div class="space-y-3">
-    <a href="https://buy.stripe.com/dRmdR83Fq2c44G71BA38400" target="_blank" class="block w-full text-center bg-amber-400 hover:bg-amber-300 text-navy-900 font-bold py-3 px-4 rounded-lg transition-colors text-sm shadow">
-      📥 Download Instantly - .99
-    </a>
-  </div>
-  
-  <div class="mt-4 flex items-center justify-center gap-2 text-[10px] text-navy-300">
-    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-      <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"></path>
-    </svg>
-    <span>Secure Checkout via Stripe</span>
-  </div>
+  <h3 class="text-xl font-extrabold text-white mb-2 leading-snug">
+    The Nursing Home Safety &amp; Transition Checklist
+  </h3>
+  <p class="text-slate-300 text-sm mb-4 leading-relaxed">
+    Learn the <strong>20 hidden red flags</strong> state inspectors look for on tours—plus the exact 7-step protocol to safely move a loved one out of an unsafe facility.
+  </p>
+  <ul class="text-xs text-slate-200 space-y-1.5 mb-5">
+    <li>✓ 15-Minute Tour Inspection Audit</li>
+    <li>✓ Word-for-Word Questions for Directors</li>
+    <li>✓ Step-by-Step Safe Transfer Roadmap</li>
+  </ul>
+  <a href="/checklist" class="block w-full text-center bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold py-3 px-4 rounded-lg shadow transition duration-150">
+    See What's Inside ($9.99) →
+  </a>
+  <p class="text-[11px] text-slate-400 text-center mt-2.5">
+    Instant Printable PDF • Secure Checkout via Stripe
+  </p>
 </div>
